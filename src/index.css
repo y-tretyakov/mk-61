@@ -1,0 +1,85 @@
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&family=Inter:wght@400;600;700;900&display=swap');
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #0f172a;
+  color: #e2e8f0;
+  margin: 0;
+}
+
+.vfd-font {
+  font-family: 'VT323', monospace;
+}
+
+.code-font {
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.vfd-screen {
+  background-color: #02120e;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.95), 0 0 10px rgba(0, 255, 204, 0.1);
+  border: 2px solid #0a201c;
+  position: relative;
+  overflow: hidden;
+}
+
+.vfd-filter {
+  background: linear-gradient(180deg, rgba(4, 40, 25, 0.85) 0%, rgba(2, 25, 15, 0.9) 100%);
+  border: 1px solid rgba(0, 255, 180, 0.15);
+}
+
+.vfd-text {
+  color: #12ffc8;
+  text-shadow: 0 0 7px rgba(18, 255, 200, 0.85), 0 0 14px rgba(18, 255, 200, 0.4);
+}
+
+.vfd-dim {
+  color: #032e26;
+}
+
+.mk61-case {
+  background: #1c1d21;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border: 2px solid #2d3038;
+}
+
+.mk61-visor {
+  background: repeating-linear-gradient(
+    0deg,
+    #181a1d,
+    #181a1d 2px,
+    #22252a 2px,
+    #22252a 4px
+  );
+  border-top: 1px solid #101114;
+  border-bottom: 2px solid #101114;
+}
+
+.btn-mk {
+  position: relative;
+  transition: all 0.05s ease;
+  user-select: none;
+  box-shadow: 0 3px 0 #0d0e10, 0 4px 6px rgba(0,0,0,0.6);
+  border-radius: 3px;
+}
+
+.btn-mk:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #0d0e10, 0 2px 3px rgba(0,0,0,0.6);
+}
+
+.btn-black { background: linear-gradient(180deg, #373a40 0%, #212327 100%); color: #ffffff; }
+.btn-grey { background: linear-gradient(180deg, #e1e5eb 0%, #bdc3cc 100%); color: #111827; font-weight: 800; }
+.btn-yellow { background: linear-gradient(180deg, #facc15 0%, #ca8a04 100%); color: #000000; font-weight: 900; }
+.btn-blue { background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%); color: #ffffff; font-weight: 900; }
+.btn-red { background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%); color: #ffffff; font-weight: 900; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0f172a; }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+@keyframes pulse-border {
+  0%, 100% { border-color: rgba(6, 182, 212, 0.4); }
+  50% { border-color: rgba(6, 182, 212, 1); }
+}
