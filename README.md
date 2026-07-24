@@ -12,6 +12,8 @@
 
 > **🇷🇺 [Открыть симулятор](https://y-tretyakov.github.io/mk-61/)**
 
+![Social Preview](social-preview.jpg)
+
 ---
 
 ## Возможности
