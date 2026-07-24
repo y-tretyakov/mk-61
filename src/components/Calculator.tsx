@@ -1,5 +1,5 @@
 import { useCalculatorStore } from '../store/calculatorStore'
-import { formatVFD } from '../utils/math'
+import { formatVFD } from '../vm'
 
 interface KeyDef {
   top: string

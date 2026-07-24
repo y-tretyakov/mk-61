@@ -1,8 +1,19 @@
 import { create } from 'zustand'
 import { getInitialState } from './initialState'
-import type { CalculatorStore } from './types'
+import type { CalculatorStore, ProgramStep } from './types'
 import { lessons, type Lesson } from '../data/lessons'
-import { toRad, formatNumber } from '../utils/math'
+import {
+  pushStack,
+  popStack,
+  triggerError,
+  executeFFunction,
+  executeKFunction,
+  executeOneStep,
+  OPCODE_TABLE,
+  EXAMPLE_PROGRAMS,
+  exportToText,
+  parseProgram,
+} from '../vm'
 
 let audioCtx: AudioContext | null = null
 
@@ -23,92 +34,50 @@ function playKeyClick(enabled: boolean) {
   } catch { /* ignore audio errors */ }
 }
 
-function pushStack(s: CalculatorStore) {
-  s.T = s.Z
-  s.Z = s.Y
-  s.Y = s.X
-}
-
-function popStack(s: CalculatorStore) {
-  const top = s.X
-  s.X = s.Y
-  s.Y = s.Z
-  s.Z = s.T
-  return top
-}
-
-function triggerError(s: CalculatorStore, type = 'ЕГГОГ') {
-  s.isError = true
-  s.errorType = type
-}
-
 function recordProgramStep(s: CalculatorStore, mod: string | null, key: string) {
-  let opcode = '00'
-  let mnemonic = key
-  if (mod === 'F') {
-    opcode = '15'
-    mnemonic = 'F ' + key
+  const step = OPCODE_TABLE[key]
+  if (!step) return
+
+  const prefixCode = mod === 'K' ? '1E' : '1D'
+  if (mod) {
+    s.programRAM[s.pc] = { code: prefixCode, mnemonic: mod }
+    s.pc = (s.pc + 1) % 105
+    s.programRAM[s.pc] = { code: step.code, mnemonic: `${mod} ${step.mnemonic}` }
+    s.pc = (s.pc + 1) % 105
   } else {
-    opcode = String(10 + (key.charCodeAt(0) % 80)).padStart(2, '0')
-  }
-  s.programRAM[s.pc] = { code: opcode, mnemonic }
-  s.pc = (s.pc + 1) % 105
-}
-
-function executeFFunction(s: CalculatorStore, key: string) {
-  switch (key) {
-    case '1': s.X = Math.exp(s.X); break
-    case '2':
-      if (s.X <= 0) { triggerError(s); return }
-      s.X = Math.log10(s.X); break
-    case '3':
-      if (s.X <= 0) { triggerError(s); return }
-      s.X = Math.log(s.X); break
-    case '7': s.X = Math.sin(toRad(s.X, s.angleUnit)); break
-    case '8': s.X = Math.cos(toRad(s.X, s.angleUnit)); break
-    case '9': s.X = Math.tan(toRad(s.X, s.angleUnit)); break
-    case '4': s.X = fromRad(Math.asin(s.X), s.angleUnit); break
-    case '5': s.X = fromRad(Math.acos(s.X), s.angleUnit); break
-    case '6': s.X = fromRad(Math.atan(s.X), s.angleUnit); break
-    case '+':
-      pushStack(s)
-      s.X = Math.PI; break
-    case '/':
-      if (s.X === 0) { triggerError(s); return }
-      s.X = 1 / s.X; break
-    case '*': s.X = Math.pow(s.X, 2); break
-    case '-':
-      if (s.X < 0) { triggerError(s); return }
-      s.X = Math.sqrt(s.X); break
-    case 'SWAP': {
-      const y = s.Y
-      s.X = Math.pow(y, s.X); break
-    }
-    case 'ENTER': s.X = s.X1; break
-    case '0': s.X = Math.pow(10, s.X); break
-    case 'P': s.pendingMemoryOp = 'P'; break
-    case 'IP': s.pendingMemoryOp = 'IP'; break
+    s.programRAM[s.pc] = { code: step.code, mnemonic: step.mnemonic }
+    s.pc = (s.pc + 1) % 105
   }
 }
 
-function executeKFunction(s: CalculatorStore, key: string) {
-  switch (key) {
-    case '7': s.X = s.X - Math.floor(s.X); break
-    case '8': s.X = Math.trunc(s.X); break
-    case '4': s.X = Math.abs(s.X); break
-    case '5': s.X = Math.sign(s.X); break
-    default:
-      if (key >= '0' && key <= '9') {
-        s.X = s.memory[parseInt(key)] || 0
+function executeProgram(get: () => CalculatorStore, set: (partial: Partial<CalculatorStore>) => void) {
+  const s = get()
+  s.isProgramRunning = true
+  set({ isProgramRunning: true })
+
+  let steps = 0
+  const MAX_STEPS = 10000
+
+  function step() {
+    const current = get()
+    if (!current.isProgramRunning) return
+
+    const shouldContinue = executeOneStep(current)
+    set({ ...current })
+
+    if (shouldContinue) {
+      steps++
+      if (steps < MAX_STEPS) {
+        setTimeout(step, 1)
+      } else {
+        set({ isProgramRunning: false })
       }
-      break
+    } else {
+      set({ isProgramRunning: false })
+    }
   }
-}
 
-function fromRad(val: number, unit: string) {
-  if (unit === 'DEG') return val * 180 / Math.PI
-  if (unit === 'GRAD') return val * 200 / Math.PI
-  return val
+  step()
 }
 
 function checkLessonProgress(s: CalculatorStore) {
@@ -116,8 +85,50 @@ function checkLessonProgress(s: CalculatorStore) {
   return lesson?.check ? lesson.check(s) : false
 }
 
-export const useCalculatorStore = create<CalculatorStore>((set, get) => ({
-  ...getInitialState(),
+const STORAGE_KEY = 'mk61-save'
+
+function saveToDisk(get: () => CalculatorStore) {
+  try {
+    const s = get()
+    const data = {
+      programRAM: s.programRAM,
+      memory: s.memory,
+      pc: s.pc,
+      mode: s.mode,
+      angleUnit: s.angleUnit,
+      X: s.X, Y: s.Y, Z: s.Z, T: s.T, X1: s.X1,
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+  } catch { /* storage unavailable */ }
+}
+
+function loadFromDisk(set: (partial: Partial<CalculatorStore>) => void) {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return
+    const data = JSON.parse(raw)
+    if (data.programRAM) {
+      const fullRam = Array.from({ length: 105 }, (_, i) =>
+        data.programRAM[i] || { code: '00', mnemonic: 'НОП' }
+      )
+      set({
+        programRAM: fullRam,
+        memory: data.memory || new Array(15).fill(0),
+        pc: data.pc ?? 0,
+        mode: data.mode || 'AVT',
+        angleUnit: data.angleUnit || 'RAD',
+        X: data.X ?? 0, Y: data.Y ?? 0, Z: data.Z ?? 0,
+        T: data.T ?? 0, X1: data.X1 ?? 0,
+      })
+    }
+  } catch { /* ignore corrupt data */ }
+}
+
+export const useCalculatorStore = create<CalculatorStore>((set, get) => {
+  const init = getInitialState()
+  loadFromDisk(set)
+  return {
+  ...init,
 
   setTab(tab) {
     set({ currentTab: tab })
@@ -149,6 +160,10 @@ export const useCalculatorStore = create<CalculatorStore>((set, get) => ({
       inputStr: '0', isEnteringNum: false, isError: false, errorType: null,
       memory: new Array(15).fill(0),
       pendingMemoryOp: null,
+      expectingOperand: null,
+      operandDigits: 0,
+      isProgramRunning: false,
+      returnAddr: null,
     })
   },
 
@@ -183,6 +198,13 @@ export const useCalculatorStore = create<CalculatorStore>((set, get) => ({
 
     if (s.isError && key !== 'CX') return
 
+    if (s.isProgramRunning) {
+      if (key === 'SP') {
+        set({ isProgramRunning: false })
+      }
+      return
+    }
+
     if (key === 'F') {
       set({ modifier: s.modifier === 'F' ? null : 'F' })
       return
@@ -198,10 +220,87 @@ export const useCalculatorStore = create<CalculatorStore>((set, get) => ({
     if (mod === 'F' && key === 'VP') { set({ mode: 'PRG' }); return }
     if (mod === 'F' && key === 'CHS') { set({ mode: 'AVT' }); return }
 
-    if (s.mode === 'PRG' && key !== 'VO' && key !== 'BP') {
-      const next = { ...s }
+    if (s.mode === 'PRG') {
+      const next = { ...s, modifier: null }
+
+      if (mod && (key === 'STEP_BACK' || key === 'STEP_FWD' || key === 'VO' || key === 'SP')) {
+        recordProgramStep(next, mod, key)
+        next.expectingOperand = 'address'
+        next.operandDigits = 2
+        set(next)
+        return
+      }
+
+      if (!mod && key === 'VO') {
+        next.pc = 0
+        next.expectingOperand = null
+        next.operandDigits = 0
+        set(next)
+        return
+      }
+
+      if (!mod && (key === 'STEP_FWD' || key === 'STEP_BACK')) {
+        next.pc = key === 'STEP_FWD'
+          ? (next.pc + 1) % 105
+          : (next.pc - 1 + 105) % 105
+        next.expectingOperand = null
+        next.operandDigits = 0
+        set(next)
+        return
+      }
+
+      if (next.expectingOperand) {
+        if (key >= '0' && key <= '9') {
+          const info = OPCODE_TABLE[key]
+          next.programRAM[next.pc] = { code: info.code, mnemonic: key }
+          next.pc = (next.pc + 1) % 105
+          next.operandDigits--
+          if (next.operandDigits <= 0) next.expectingOperand = null
+          set(next)
+          return
+        }
+        next.expectingOperand = null
+        next.operandDigits = 0
+      }
+
+      if (!mod) {
+        if (key === 'P' || key === 'IP') {
+          const info = OPCODE_TABLE[key]
+          next.programRAM[next.pc] = { code: info.code, mnemonic: info.mnemonic }
+          next.pc = (next.pc + 1) % 105
+          next.expectingOperand = 'register'
+          next.operandDigits = 1
+          set(next)
+          return
+        }
+        if (key === 'BP' || key === 'PP') {
+          const info = OPCODE_TABLE[key]
+          next.programRAM[next.pc] = { code: info.code, mnemonic: info.mnemonic }
+          next.pc = (next.pc + 1) % 105
+          next.expectingOperand = 'address'
+          next.operandDigits = 2
+          set(next)
+          return
+        }
+      }
+
       recordProgramStep(next, mod, key)
       set(next)
+      return
+    }
+
+    if (key === 'STEP_FWD') {
+      const current = get()
+      if (!current.isError) {
+        executeOneStep(current)
+        set({ ...current })
+      }
+      return
+    }
+    if (key === 'STEP_BACK') { set({ pc: (s.pc - 1 + 105) % 105 }); return }
+
+    if (key === 'SP') {
+      executeProgram(get, set)
       return
     }
 
@@ -317,10 +416,32 @@ export const useCalculatorStore = create<CalculatorStore>((set, get) => ({
     })
   },
 
+  exportProgram(): string {
+    return exportToText(get().programRAM)
+  },
+
+  importProgram(text: string) {
+    const ram = parseProgram(text)
+    if (!ram) return
+    set({ programRAM: ram, pc: 0, returnAddr: null, isProgramRunning: false, isError: false })
+  },
+
+  loadExample(index: number) {
+    const example = EXAMPLE_PROGRAMS[index]
+    if (!example) return
+    const ram = parseProgram(example.codes)
+    if (!ram) return
+    set({ programRAM: ram, pc: 0, returnAddr: null, isProgramRunning: false, isError: false, mode: 'AVT' })
+  },
+
   updateUI() {
     // UI is reactive via Zustand subscriptions
   },
-}))
+  }
+})
+
+const store = useCalculatorStore
+store.subscribe(() => saveToDisk(store.getState))
 
 const autoDemos: Record<number, (get: () => CalculatorStore, set: (partial: Partial<CalculatorStore>) => void) => void> = {
   0: (get, set) => {

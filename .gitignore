@@ -20,3 +20,5 @@ Thumbs.db
 # Test results
 test-results/
 playwright-report/
+PROMPT.md
+social-preview.png

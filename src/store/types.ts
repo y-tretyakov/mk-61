@@ -24,7 +24,10 @@ export interface CalculatorState {
   memory: number[]
   programRAM: ProgramStep[]
   pc: number
+  expectingOperand: 'register' | 'address' | null
+  operandDigits: number
   isProgramRunning: boolean
+  returnAddr: number | null
   isError: boolean
   errorType: string | null
   soundEnabled: boolean
@@ -45,6 +48,9 @@ export interface CalculatorActions {
   nextLesson: () => void
   prevLesson: () => void
   runAutoDemo: () => void
+  exportProgram: () => string
+  importProgram: (text: string) => void
+  loadExample: (index: number) => void
 }
 
 export type CalculatorStore = CalculatorState & CalculatorActions

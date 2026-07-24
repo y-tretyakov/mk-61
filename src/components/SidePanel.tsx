@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useCalculatorStore } from '../store/calculatorStore'
 import { lessons } from '../data/lessons'
 
@@ -20,6 +21,15 @@ export function SidePanel() {
   const programRAM = useCalculatorStore((s) => s.programRAM)
   const isError = useCalculatorStore((s) => s.isError)
   const errorType = useCalculatorStore((s) => s.errorType)
+  const mode = useCalculatorStore((s) => s.mode)
+  const exportProgram = useCalculatorStore((s) => s.exportProgram)
+  const importProgram = useCalculatorStore((s) => s.importProgram)
+  const loadExample = useCalculatorStore((s) => s.loadExample)
+
+  const [showExport, setShowExport] = useState(false)
+  const [showImport, setShowImport] = useState(false)
+  const [importText, setImportText] = useState('')
+  const [exportText, setExportText] = useState('')
 
   const lesson = lessons[currentLessonIdx]
 
@@ -70,6 +80,7 @@ export function SidePanel() {
           </div>
           <div className="flex gap-1">
             <button
+              id="btn-prev-lesson"
               onClick={prevLesson}
               className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition"
             >
@@ -79,6 +90,7 @@ export function SidePanel() {
               {currentLessonIdx + 1} / {lessons.length}
             </span>
             <button
+              id="btn-next-lesson"
               onClick={nextLesson}
               className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition"
             >
@@ -113,12 +125,12 @@ export function SidePanel() {
               <strong
                 id="task-status"
                 className={
-                  lesson?.check({ X, Y, Z, T, X1, pc, memory, programRAM, isError, errorType } as any)
+                  lesson?.check({ X, Y, Z, T, X1, pc, memory, programRAM, isError, errorType, mode } as any)
                     ? 'text-emerald-400'
                     : 'text-amber-400'
                 }
               >
-                {lesson?.check({ X, Y, Z, T, X1, pc, memory, programRAM, isError, errorType } as any)
+                {lesson?.check({ X, Y, Z, T, X1, pc, memory, programRAM, isError, errorType, mode } as any)
                   ? '✓ Выполнено!'
                   : 'Ожидает выполнения'}
               </strong>
@@ -187,12 +199,94 @@ export function SidePanel() {
           <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
             <i className="fa-solid fa-microchip text-cyan-400"></i> Память Программы (105 шагов)
           </h3>
-          <div className="text-xs font-mono text-cyan-400">
-            Указатель (PC):{' '}
-            <span className="font-bold bg-slate-950 px-2 py-1 rounded border border-slate-800">
-              {String(pc).padStart(2, '0')}
-            </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setExportText(exportProgram())
+                setShowExport(!showExport)
+                setShowImport(false)
+              }}
+              className="text-[11px] px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+            >
+              <i className="fa-solid fa-download"></i> Экспорт
+            </button>
+            <button
+              onClick={() => {
+                setShowImport(!showImport)
+                setShowExport(false)
+                setImportText('')
+              }}
+              className="text-[11px] px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+            >
+              <i className="fa-solid fa-upload"></i> Импорт
+            </button>
+            <div className="text-xs font-mono text-cyan-400">
+              PC:
+              <span className="font-bold bg-slate-950 px-2 py-1 rounded border border-slate-800 ml-1">
+                {String(pc).padStart(2, '0')}
+              </span>
+            </div>
           </div>
+        </div>
+
+        {showExport && (
+          <div className="bg-slate-950 rounded-xl border border-slate-700 p-3">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs text-slate-400">Экспорт программы (hex-коды)</span>
+              <button
+                onClick={() => navigator.clipboard.writeText(exportText)}
+                className="text-[11px] px-2 py-1 rounded bg-cyan-950 hover:bg-cyan-900 text-cyan-300 text-xs"
+              >
+                <i className="fa-solid fa-copy"></i> Копировать
+              </button>
+            </div>
+            <textarea
+              readOnly
+              value={exportText}
+              className="w-full h-32 bg-slate-900 text-green-400 text-xs font-mono p-2 rounded border border-slate-700 resize-none"
+            />
+          </div>
+        )}
+
+        {showImport && (
+          <div className="bg-slate-950 rounded-xl border border-slate-700 p-3">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs text-slate-400">Вставьте hex-коды программы</span>
+              <button
+                onClick={() => {
+                  importProgram(importText)
+                  setShowImport(false)
+                  setImportText('')
+                }}
+                className="text-[11px] px-2 py-1 rounded bg-cyan-950 hover:bg-cyan-900 text-cyan-300 text-xs"
+              >
+                <i className="fa-solid fa-check"></i> Загрузить
+              </button>
+            </div>
+            <textarea
+              value={importText}
+              onChange={(e) => setImportText(e.target.value)}
+              placeholder="00 01 0E 03 17 ..."
+              className="w-full h-32 bg-slate-900 text-green-400 text-xs font-mono p-2 rounded border border-slate-700 resize-none"
+            />
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="text-xs text-slate-500">Примеры:</span>
+          {[
+            { name: '5+3×4', idx: 0 },
+            { name: 'x≥0 тест', idx: 1 },
+            { name: '5!', idx: 2 },
+          ].map((ex) => (
+            <button
+              key={ex.idx}
+              onClick={() => loadExample(ex.idx)}
+              className="text-[11px] px-2 py-1 rounded bg-slate-950 hover:bg-slate-800 text-slate-400 border border-slate-800 hover:text-cyan-300"
+            >
+              {ex.name}
+            </button>
+          ))}
         </div>
 
         <p className="text-xs text-slate-400">
@@ -200,7 +294,7 @@ export function SidePanel() {
           <strong className="text-amber-400">ПРГ</strong> для записи нажатий клавиш в виде байт-кодов.
         </p>
 
-        <div className="bg-slate-950 rounded-xl border border-slate-800 overflow-hidden flex-grow max-h-[360px] overflow-y-auto">
+        <div className="bg-slate-950 rounded-xl border border-slate-800 overflow-hidden flex-grow max-h-[300px] overflow-y-auto">
           <table className="w-full text-left border-collapse text-xs code-font">
             <thead className="bg-slate-900 text-slate-400 border-b border-slate-800 sticky top-0">
               <tr>
