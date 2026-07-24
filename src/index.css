@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&family=Inter:wght@400;600;700;900&display=swap');
+@import "tailwindcss";
 
 body {
   font-family: 'Inter', sans-serif;
