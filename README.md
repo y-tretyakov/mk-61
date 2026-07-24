@@ -1,5 +1,7 @@
 # Электроника МК-61 — Интерактивный Обучающий Симулятор
 
+![Social Preview](social-preview.jpg)
+
 [![Deploy](https://github.com/y-tretyakov/mk-61/actions/workflows/deploy.yml/badge.svg)](https://github.com/y-tretyakov/mk-61/actions/workflows/deploy.yml)
 [![Playwright Tests](https://img.shields.io/badge/tests-playwright-green)](https://playwright.dev)
 [![React 19](https://img.shields.io/badge/react-19-blue)](https://react.dev)
@@ -10,9 +12,7 @@
 
 Точная эмуляция программируемого микрокалькулятора **Электроника МК-61** с интерактивным курсом из 12 уроков. Написан на React 19 + Zustand + Vite + TypeScript + Tailwind CSS 4.
 
-> **🇷🇺 [Открыть симулятор](https://y-tretyakov.github.io/mk-61/)**
-
-![Social Preview](social-preview.jpg)
+> **🌐 [Открыть симулятор](https://y-tretyakov.github.io/mk-61/)**
 
 ---
 
