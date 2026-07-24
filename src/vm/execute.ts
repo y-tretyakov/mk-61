@@ -65,7 +65,8 @@ export function executeKFunction(s: VMState, key: string) {
     case '5': s.X = Math.sign(s.X); break
     default:
       if (key >= '0' && key <= '9') {
-        s.X = s.memory[parseInt(key)] || 0
+        const idx = parseInt(key)
+        s.X = s.memory[idx <= 4 ? idx + 10 : idx] || 0
       }
       break
   }
@@ -124,6 +125,15 @@ export function executeOneStep(s: VMState): boolean {
       advance(); return true
 
     case '0C':
+      s.X1 = s.X
+      if (!s.isEnteringNum) {
+        pushStack(s)
+        s.inputStr = '1'
+        s.isEnteringNum = true
+        s.hasDot = false
+      }
+      s.enteringExp = true
+      s.expStr = ''
       advance(); return true
 
     case '0D':

@@ -322,6 +322,13 @@ export const useCalculatorStore = create<CalculatorStore>((set, get) => {
           next.isEnteringNum = false
           return next
         }
+        if (next.enteringExp) {
+          if (next.expStr.length < 2) {
+            next.expStr += key
+          }
+          next.X = parseFloat(next.inputStr) * Math.pow(10, parseFloat(next.expStr) || 0)
+          return next
+        }
         if (!next.isEnteringNum) {
           pushStack(next)
           next.inputStr = key
@@ -351,8 +358,24 @@ export const useCalculatorStore = create<CalculatorStore>((set, get) => {
         return next
       }
 
+      if (!mod && key === 'VP') {
+        next.X1 = next.X
+        if (!next.isEnteringNum) {
+          pushStack(next)
+          next.inputStr = '1'
+          next.isEnteringNum = true
+          next.hasDot = false
+        }
+        next.enteringExp = true
+        next.expStr = ''
+        return next
+      }
+
       if (!mod && key === 'CHS') {
-        if (next.isEnteringNum) {
+        if (next.enteringExp) {
+          next.expStr = next.expStr.startsWith('-') ? next.expStr.slice(1) : '-' + next.expStr
+          next.X = parseFloat(next.inputStr) * Math.pow(10, parseFloat(next.expStr) || 0)
+        } else if (next.isEnteringNum) {
           next.inputStr = next.inputStr.startsWith('-')
             ? next.inputStr.substring(1)
             : '-' + next.inputStr
@@ -396,6 +419,20 @@ export const useCalculatorStore = create<CalculatorStore>((set, get) => {
       }
 
       if (mod === 'K') {
+        if (next.pendingMemoryOp === 'P' && key >= '0' && key <= '4') {
+          const idx = 10 + parseInt(key)
+          next.memory = [...next.memory]
+          next.memory[idx] = next.X
+          next.pendingMemoryOp = null
+          return next
+        }
+        if (next.pendingMemoryOp === 'IP' && key >= '0' && key <= '4') {
+          const idx = 10 + parseInt(key)
+          next.X = next.memory[idx] || 0
+          next.pendingMemoryOp = null
+          next.isEnteringNum = false
+          return next
+        }
         executeKFunction(next, key)
         return next
       }

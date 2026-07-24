@@ -6,6 +6,42 @@ All notable changes to the MK-61 Emulator project.
 
 ## [Unreleased]
 
+### Fixed
+
+#### Фаза 4.4: K-регистры A-E
+
+- **executeKFunction**: Исправлен маппинг K+0→A (memory[10]), K+1→B (memory[11]), K+2→C (memory[12]), K+3→D (memory[13]). K+4 — |x| (функция), K+5 — ЗН (sign), K+6/K+9 → memory[6]/memory[9] (без функции на клавише). Регистр E (memory[14]) доступен только через П/ИП→K→4.
+  - `src/vm/execute.ts:68-69`
+- **handleKey/AVT**: Добавлена поддержка записи/чтения регистров A-E через П→K→digit и ИП→K→digit.
+  - `src/store/calculatorStore.ts:398-414`
+
+#### Фаза 4.5: Исправление ВП (ввод экспоненты)
+
+- **executeOneStep case '0C'**: ВП больше не является no-op. Реализован ввод экспоненты: устанавливает `enteringExp=true`, `expStr=''`, при необходимости пушшит 1 в стек.
+  - `src/vm/execute.ts:127-137`
+- **handleKey/AVT**: Добавлена обработка VP в AVT-режиме — переход в режим ввода экспоненты.
+  - `src/store/calculatorStore.ts:361-372`
+- **handleKey/AVT digits**: Ввод цифр в режиме экспоненты (enteringExp=true) добавляет в `expStr` и пересчитывает X.
+  - `src/store/calculatorStore.ts:325-330`
+- **handleKey/AVT CHS**: CHS в режиме экспоненты переключает знак экспоненты.
+  - `src/store/calculatorStore.ts:374-377`
+
+#### Фаза 4.2: Модульные тесты для VM
+
+- **vitest**: Установлен и настроен (`vitest.config.ts`, скрипты `test:unit`/`test:unit:watch`).
+- **53 модульных теста** для VM-слоя:
+  - `pushStack`/`popStack` — 3 теста
+  - `triggerError` — 1 тест
+  - `executeFFunction` — 15 тестов (eˣ, lg, ln, sin, π, 1/x, x², √, xʸ, Bx, 10ˣ, П, ИП)
+  - `executeKFunction` — 11 тестов (дробь, целое, |x|, sign, K+0..4→A-E, K+6/K+9→memory)
+  - `executeOneStep` — 17 тестов (digit, DOT, CHS, CX, ENTER, VP, SWAP, +, -, *, /, div/0, С/П, В/О, П, ИП, K+0, F+7, STEP_FWD)
+- Все 53 теста проходят.
+
+### Known Issues (pre-existing)
+
+- **Урок 11**: Bx (F+ENTER) не восстанавливает X1, т.к. `next.X1 = next.X` в store перезаписывает X1 ДО вызова Bx.
+- **Урок 12**: В последовательности `7 ENTER 8 + 9 ENTER 3 - *` стек даёт X=54 вместо 90 из-за popStack/shift семантики.
+
 ### Added
 
 #### Фаза 4.1: Выделение чистой VM
