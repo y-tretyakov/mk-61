@@ -8,6 +8,28 @@ All notable changes to the MK-61 Emulator project.
 
 ### Added
 
+#### Фаза 4.1: Выделение чистой VM
+
+- **Новый модуль `src/vm/`**: Чистый интерпретатор без зависимостей от React/Zustand.
+  - `types.ts` — `VMState`, `ProgramStep`, `ExampleProgram`
+  - `execute.ts` — `pushStack`, `popStack`, `triggerError`, `executeFFunction`, `executeKFunction`, `executeOneStep`
+  - `opcodes.ts` — `OPCODE_TABLE`, `OPCODE_TO_KEY`, `codeToMnemonic`, `opcodeDigit`
+  - `math.ts` — `toRad`, `fromRad`
+  - `display.ts` — `formatVFD`, `formatNumber`, `formatRegister`
+  - `examples.ts` — `EXAMPLE_PROGRAMS`, `exportToText`, `parseProgram`
+  - `index.ts` — публичный API
+
+- **calculatorStore.ts**: Импортирует VM-функции вместо локальных определений (на 250+ строк меньше).
+- **Calculator.tsx**: Импорт `formatVFD` из `../vm`.
+
+### Fixed
+
+- **.gitignore**: Убраны дублирующиеся записи.
+
+### Changed
+
+- **utils/math.ts**: Реэкспорт из `../vm` для обратной совместимости.
+
 #### Фаза 1: Точность opcodes и запись программ
 
 - **Opcode table**: Добавлена `OPCODE_TABLE` с правильными кодами МК-61 (00-1E). Каждая клавиша маппится на реальный байт-код.
